@@ -2,34 +2,301 @@
 
 ## Architecture du projet
 
-Nuxt 4 utilise une structure de dossiers spécifique :
+Nuxt 4 introduit une nouvelle structure avec le dossier **`app/`** qui centralise tout le code de l'application Vue :
 
 ```
 mon-projet/
-├── pages/                # Routes front-end (à la racine)
-│   ├── index.vue        # Route: /
-│   ├── documents.vue    # Route: /documents
-│   └── documents/
-│       └── [id].vue     # Route: /documents/:id
-├── server/              # Code serveur
-│   ├── api/            # Routes API
+├── app/                 # 🆕 Dossier principal de l'application
+│   ├── app.vue         # Point d'entrée principal (optionnel si tu as pages/)
+│   ├── pages/          # Routes front-end
+│   │   ├── index.vue   # Route: /
+│   │   ├── documents.vue    # Route: /documents
+│   │   └── documents/
+│   │       └── [id].vue     # Route: /documents/:id
+│   ├── layouts/        # Layouts pour structurer les pages
+│   │   ├── default.vue # Layout par défaut
+│   │   └── custom.vue  # Layout personnalisé
+│   ├── components/     # Composants Vue réutilisables
+│   ├── composables/    # Composables (logique réutilisable)
+│   ├── middleware/     # Middleware de navigation
+│   ├── plugins/        # Plugins Nuxt
+│   └── utils/          # Fonctions utilitaires
+├── server/             # 🔧 Code serveur (séparé de l'app)
+│   ├── api/           # Routes API
 │   │   ├── documents.get.ts      # GET /api/documents
 │   │   └── documents/
 │   │       └── [id].get.ts       # GET /api/documents/:id
-│   ├── routes/         # Routes serveur personnalisées
-│   ├── middleware/     # Middleware serveur
-│   └── utils/          # Utilitaires serveur
-├── components/          # Composants Vue
-├── composables/         # Composables réutilisables
-├── public/             # Fichiers statiques
-└── nuxt.config.ts      # Configuration Nuxt
+│   ├── routes/        # Routes serveur personnalisées
+│   ├── middleware/    # Middleware serveur
+│   └── utils/         # Utilitaires serveur
+├── public/            # Fichiers statiques (images, fonts, etc.)
+├── .nuxt/             # ⚠️ Fichiers générés (ne pas toucher)
+├── nuxt.config.ts     # Configuration Nuxt
+└── package.json
 ```
 
-**Points clés :**
-- `pages/` : dossier à la racine pour le routing front-end
-- `server/api/` : routes API accessibles via `/api/*`
-- Les fichiers dans `pages/` créent automatiquement des routes
+**Points clés de Nuxt 4 :**
+- **`app/`** : Tout le code front-end (Vue) est dans ce dossier
+- **`server/`** : Tout le code back-end (API) est séparé
+- **Meilleure séparation** : code client vs code serveur
+- **Type-safety améliorée** : TypeScript fonctionne mieux avec cette structure
+- Les fichiers dans `app/pages/` créent automatiquement des routes
 - Les fichiers dans `server/api/` créent automatiquement des endpoints API
+
+---
+
+## Le fichier app.vue - Point d'entrée principal
+
+Le fichier `app/app.vue` est le composant racine de ton application. C'est par là que tout passe !
+
+### Cas 1 : Projet sans pages (landing page simple)
+
+Si tu ne crées **pas** de dossier `app/pages/`, Nuxt affiche par défaut `<NuxtWelcome />` :
+
+**Fichier :** `app/app.vue` (celui créé par défaut)
+
+```vue
+<template>
+  <div>
+    <NuxtWelcome />
+  </div>
+</template>
+```
+
+👉 `<NuxtWelcome />` est juste un écran de bienvenue. **Tu dois le supprimer ou remplacer** par ton contenu !
+
+---
+
+### Cas 2 : Projet avec routing (le plus courant)
+
+Dès que tu crées le dossier `app/pages/`, tu **dois** utiliser `<NuxtPage />` dans `app.vue` :
+
+**Fichier :** `app/app.vue`
+
+```vue
+<template>
+  <div>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
+</template>
+```
+
+**Explications :**
+- `<NuxtPage />` : Affiche la page correspondant à la route actuelle (contenu de `app/pages/`)
+- `<NuxtLayout>` : Entoure la page avec un layout (header, footer, menu, etc.)
+
+---
+
+### Variante : Sans layouts
+
+Si tu n'as **pas besoin** de layouts (pas de structure commune entre tes pages), tu peux simplifier :
+
+```vue
+<template>
+  <div>
+    <NuxtPage />
+  </div>
+</template>
+```
+
+Mais c'est rare ! En général, on veut un header/footer commun, donc on garde `<NuxtLayout>`.
+
+---
+
+### Variante : Structure globale dans app.vue
+
+Tu peux aussi mettre des éléments globaux directement dans `app.vue` :
+
+```vue
+<template>
+  <div>
+    <header>
+      <h1>Mon site</h1>
+      <nav>
+        <NuxtLink to="/">Accueil</NuxtLink>
+        <NuxtLink to="/documents">Documents</NuxtLink>
+      </nav>
+    </header>
+
+    <main>
+      <NuxtLayout>
+        <NuxtPage />
+      </NuxtLayout>
+    </main>
+
+    <footer>
+      <p>© 2025 Mon site</p>
+    </footer>
+  </div>
+</template>
+```
+
+⚠️ **Attention** : Tout ce que tu mets dans `app.vue` est **global** (CSS, JS) et inclus dans toutes les pages.
+
+---
+
+## Les Layouts - Structure commune des pages
+
+Les layouts permettent d'avoir une structure commune (header, footer, sidebar) pour plusieurs pages.
+
+### Layout par défaut
+
+**Fichier :** `app/layouts/default.vue`
+
+```vue
+<template>
+  <div class="layout">
+    <header class="header">
+      <nav>
+        <NuxtLink to="/">Accueil</NuxtLink>
+        <NuxtLink to="/documents">Documents</NuxtLink>
+      </nav>
+    </header>
+
+    <main class="content">
+      <!-- C'est ici que le contenu de la page s'affiche -->
+      <slot />
+    </main>
+
+    <footer class="footer">
+      <p>© 2025 Mon application</p>
+    </footer>
+  </div>
+</template>
+
+<style scoped>
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: #333;
+  color: white;
+  padding: 1rem;
+}
+
+.header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.header a {
+  color: white;
+  text-decoration: none;
+}
+
+.content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.footer {
+  background: #f5f5f5;
+  padding: 1rem;
+  text-align: center;
+}
+</style>
+```
+
+**Important :**
+- Le `<slot />` est **obligatoire** : c'est là que le contenu de la page s'insère
+- Le layout doit avoir **un seul élément racine** (ici `<div class="layout">`)
+
+---
+
+### Layout personnalisé (exemple : admin)
+
+**Fichier :** `app/layouts/admin.vue`
+
+```vue
+<template>
+  <div class="admin-layout">
+    <aside class="sidebar">
+      <h2>Admin</h2>
+      <nav>
+        <NuxtLink to="/admin">Dashboard</NuxtLink>
+        <NuxtLink to="/admin/users">Users</NuxtLink>
+      </nav>
+    </aside>
+
+    <div class="main-content">
+      <slot />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.admin-layout {
+  display: flex;
+}
+
+.sidebar {
+  width: 250px;
+  background: #2c3e50;
+  color: white;
+  padding: 1rem;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+}
+</style>
+```
+
+### Utiliser un layout spécifique dans une page
+
+**Fichier :** `app/pages/admin/index.vue`
+
+```vue
+<script setup lang="ts">
+// Définir le layout pour cette page
+definePageMeta({
+  layout: 'admin'
+})
+</script>
+
+<template>
+  <div>
+    <h1>Admin Dashboard</h1>
+    <p>Bienvenue dans l'espace admin</p>
+  </div>
+</template>
+```
+
+---
+
+### Pas de layout pour une page
+
+Si tu veux désactiver le layout pour une page spécifique :
+
+```vue
+<script setup lang="ts">
+definePageMeta({
+  layout: false
+})
+</script>
+
+<template>
+  <div>
+    <h1>Page sans layout</h1>
+  </div>
+</template>
+```
+
+---
+
+## ✅ Checklist pour démarrer
+
+1. **Supprimer ou remplacer** `<NuxtWelcome />` dans `app.vue`
+2. Créer le dossier `app/pages/` pour activer le routing
+3. Mettre `<NuxtLayout><NuxtPage /></NuxtLayout>` dans `app.vue`
+4. Créer `app/layouts/default.vue` avec ton header/footer
+5. Créer tes pages dans `app/pages/`
 
 ---
 
@@ -109,7 +376,7 @@ export default defineEventHandler(async (event) => {
 
 ### Page pour lister tous les documents
 
-**Fichier :** `pages/documents.vue`
+**Fichier :** `app/pages/documents.vue`
 
 ```vue
 <script setup lang="ts">
@@ -186,7 +453,7 @@ li {
 
 ### Page pour afficher un document spécifique
 
-**Fichier :** `pages/documents/[id].vue`
+**Fichier :** `app/pages/documents/[id].vue`
 
 ```vue
 <script setup lang="ts">
@@ -334,12 +601,15 @@ async function deleteDocument(id: number) {
 
 | Besoin | Solution |
 |--------|----------|
-| Créer une page | Fichier dans `pages/` |
+| Créer une page | Fichier dans `app/pages/` |
+| Créer un layout | Fichier dans `app/layouts/` |
 | Créer une API | Fichier dans `server/api/` |
 | GET tous | `server/api/ressource.get.ts` |
 | GET un | `server/api/ressource/[id].get.ts` |
 | Appeler API au chargement | `useFetch('/api/...')` |
 | Appeler API sur action | `$fetch('/api/...')` |
+| Point d'entrée de l'app | `app/app.vue` |
+| Composant réutilisable | `app/components/` |
 
 ---
 
